@@ -10,6 +10,11 @@ type ExchangeRate {
   rate: Float!
 }
 
+type ExchangeRates {
+  date: String!
+  rates: [ExchangeRate!]!
+}
+
 type Query {
-  exchangeRates: [ExchangeRate!]!
+  exchangeRates: ExchangeRates!
 }

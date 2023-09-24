@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ExchangeRate } from '@cuid/entities';
+import { ExchangeRates, ExchangeRate } from '@cuid/entities';
 import axios from 'axios';
 import Constants from '../../config/constants';
 
@@ -14,14 +14,18 @@ async function fetchRatesData(url: string) {
     return ratesData;
 }
 
-function parseRatesData(ratesData: string) {
-    const regex = /(?<country>.+)[|](?<currncy>.+)[|](?<amount>.+)[|](?<code>.+)[|](?<rate>.+)/gm;
-    const rates = [];
+function parseRatesData(ratesData: string): ExchangeRates {
+    const exchangeRateRegex =
+        /(?<country>.+)[|](?<currncy>.+)[|](?<amount>.+)[|](?<code>.+)[|](?<rate>.+)/gm;
+    const dateRegex = /\d{2}.\d{2}.\d{4}/gm;
+    const rates: ExchangeRate[] = [];
 
-    [...ratesData.matchAll(regex)].forEach((match) => {
+    [...ratesData.matchAll(exchangeRateRegex)].forEach((match) => {
         const parsedRate = { ...match.groups };
-        const rate = {
-            ...parsedRate,
+        const rate: ExchangeRate = {
+            country: parsedRate.country,
+            code: parsedRate.code,
+            currncy: parsedRate.currncy,
             amount: parseInt(parsedRate.amount, 10),
             rate: parseFloat(parsedRate.rate),
         };
@@ -30,16 +34,15 @@ function parseRatesData(ratesData: string) {
 
     // We have to remove the first result as it doesn't contain rates data, but information about order of rate attributes
     rates.shift();
-    return rates;
+    return { date: ratesData.match(dateRegex)[0], rates };
 }
 
 @Injectable()
 export class ExchangeRateService {
+    // eslint-disable-next-line class-methods-use-this
     async getExchangeRates() {
-        let rates: ExchangeRate[] = [];
-
         const ratesData: string = await fetchRatesData(Constants.RATES_URL);
-        rates = parseRatesData(ratesData);
+        const rates: ExchangeRates = parseRatesData(ratesData);
 
         return rates;
     }
